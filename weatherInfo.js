@@ -3,10 +3,25 @@ let result = document.getElementById("weatherResult");
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const location = urlParams.get("locationInput");
+  const savedLocation = localStorage.getItem("savedLocation");
 
   if (location) {
     try {
+      localStorage.setItem("savedLocation", location);
       const { lat, lon } = await fetchLocation(location);
+      console.log(lat, lon);
+      if (lat && lon) {
+        await fetchWeather(lat, lon);
+      } else {
+        result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Location not found!</p>`;
+      }
+    } catch (error) {
+      console.error(error);
+      result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch weather information</p>`;
+    }
+  } else if (savedLocation) {
+    try {
+      const { lat, lon } = await fetchLocation(savedLocation);
       console.log(lat, lon);
       if (lat && lon) {
         await fetchWeather(lat, lon);
@@ -84,42 +99,42 @@ async function fetchWeather(latitude, longitude) {
 
     const iconMap = {
       day: {
-        clear: { src: "imgs/clearday.png", alt: "A bright sunny day." },
-        clouds: { src: "imgs/cloudyday.png", alt: "Closeup of many clouds." },
+        clear: { src: "/imgs/clearday.png", alt: "A bright sunny day." },
+        clouds: { src: "/imgs/cloudyday.png", alt: "Closeup of many clouds." },
         rain: {
-          src: "imgs/rainday.png",
+          src: "/imgs/rainday.png",
           alt: "Closeup of the wet ground during heavy rain.",
         },
         thunderstorm: {
-          src: "imgs/thunderstormday.png",
+          src: "/imgs/thunderstormday.png",
           alt: "A thunderbolt striking the coast.",
         },
         snow: {
-          src: "imgs/snowday.png",
+          src: "/imgs/snowday.png",
           alt: "Closeup of a leaf covered in snow.",
         },
         mist: {
-          src: "imgs/foggyday.png",
+          src: "/imgs/foggyday.png",
           alt: "Landscape view of a foggy forest.",
         },
       },
       night: {
-        clear: { src: "imgs/clearnight.png", alt: "A show of the night sky." },
+        clear: { src: "/imgs/clearnight.png", alt: "A show of the night sky." },
         clouds: {
-          src: "imgs/cloudynight.png",
+          src: "/imgs/cloudynight.png",
           alt: "A shot of the moon peaking through clouds.",
         },
         rain: {
-          src: "imgs/rainnight.png",
+          src: "/imgs/rainnight.png",
           alt: "Closeup of a window during a rainy night.",
         },
         thunderstorm: {
-          src: "imgs/thunderstormnight.png",
+          src: "/imgs/thunderstormnight.png",
           alt: "A thunderbolt striking the coast during the night.",
         },
-        snow: { src: "imgs/snownight.png", alt: "Snowfall during the night." },
+        snow: { src: "/imgs/snownight.png", alt: "Snowfall during the night." },
         mist: {
-          src: "imgs/foggynight.png",
+          src: "/imgs/foggynight.png",
           alt: "Landscape view of a foggy forest during the night.",
         },
       },
