@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   //If there is a saved location and the user has not input a location, we can call the helper function on that location instead
   else if (savedLocation) {
+    const [lat, lon] = savedLocation.split(",").map(Number);
     await handleLocation(savedLocation);
   }
   //Otherwise, we can use the geolocation API to get the current user's location without requiring the input
