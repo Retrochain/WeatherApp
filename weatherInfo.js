@@ -1,40 +1,65 @@
 let result = document.getElementById("weatherResult");
 
+//As soon as the DOM content of the page loads, this function starts
 document.addEventListener("DOMContentLoaded", async () => {
+  //We first get the user input from the search form
   const urlParams = new URLSearchParams(window.location.search);
   const location = urlParams.get("locationInput");
+
+  //We also get the saved location from sessionStorage
   const savedLocation = sessionStorage.getItem("savedLocation");
 
+  //If the user has input a location, then we can call the handler function
   if (location) {
-    try {
-      sessionStorage.setItem("savedLocation", location);
-      const { lat, lon } = await fetchLocation(location);
-      if (lat && lon) {
-        await fetchWeather(lat, lon);
-      } else {
-        result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Location not found!</p>`;
+    await handleLocation(location);
+  }
+  //If there is a saved location and the user has not input a location, we can call the helper function on that location instead
+  else if (savedLocation) {
+    await handleLocation(savedLocation);
+  }
+  //Otherwise, we can use the geolocation API to get the current user's location without requiring the input
+  else if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const latit = position.coords.latitude;
+        const longi = position.coords.longitude;
+
+        await fetchWeather(latit, longi);
+      },
+      (error) => {
+        console.error("Error fetching current location:", error);
+        result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch your location</p>`;
       }
-    } catch (error) {
-      console.error(error);
-      result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch weather information</p>`;
-    }
-  } else if (savedLocation) {
-    try {
-      const { lat, lon } = await fetchLocation(savedLocation);
-      if (lat && lon) {
-        await fetchWeather(lat, lon);
-      } else {
-        result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Location not found!</p>`;
-      }
-    } catch (error) {
-      console.error(error);
-      result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch weather information</p>`;
-    }
-  } else {
-    result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>No location specified!</p>`;
+    );
+  } 
+  //Give this error in case no input is provided and geolocation API is not supported by the browser.
+  else {
+    result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Please input a location</p>`;
   }
 });
 
+//Handler function that uses the user input as location 
+async function handleLocation(loc) {
+  try {
+    //Set the current location as a sessionStorage item
+    sessionStorage.setItem("savedLocation", loc);
+    
+    //Get the latitude and longitude of the location
+    const { lat, lon } = await fetchLocation(loc);
+
+    //If successful, find the weather of the location
+    if (lat && lon) {
+      await fetchWeather(lat, lon);
+    } else {
+      result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Location not found!</p>`;
+    }
+  } catch (error) {
+    console.error(error);
+    result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch weather information</p>`;
+  }
+}
+
+//Function that finds the latitude and longitude of the user's input location.
 async function fetchLocation(param) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/direct";
@@ -48,15 +73,18 @@ async function fetchLocation(param) {
     appid: apiKey,
   });
 
+  //Using our location and URL parameters, we create a URL string
   const url = `${baseURL}${endpoint}?${fullQuery.toString()}`;
 
   try {
+    //Using fetch, we communicate with the OpenWeather Geoencoding API
     const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
+    //Return the latitude and longitude of the current location if successful
     const body = await response.json();
     const { lat, lon, name } = body[0];
 
@@ -68,6 +96,7 @@ async function fetchLocation(param) {
   return { lat: tempLat, lon: tempLon, name: tempName };
 }
 
+//Function that finds the weather of the user's input location.
 async function fetchWeather(latitude, longitude) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/data/2.5/weather";
@@ -80,9 +109,11 @@ async function fetchWeather(latitude, longitude) {
     units: "imperial",
   });
 
+  //Using our location and URL parameters, we create a URL string
   const url = `${baseURL}${endpoint}?${queryParams.toString()}`;
 
   try {
+    //Using fetch, we communicate with the OpenWeather Weather API
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -91,9 +122,11 @@ async function fetchWeather(latitude, longitude) {
 
     const body = await response.json();
 
+    //These parameters help us differentiate between day and night, and the different descriptions such as rain, snow, clear, etc.
     const weatherTime = body.weather[0]?.icon || "unknown";
     const weatherDesc = body.weather[0]?.description || "unknown";
 
+    //We create an icon map that maps each kind of weather, depending on the time of the day, to a specific header image.
     const iconMap = {
       day: {
         clear: { src: "imgs/clearday.png", alt: "A bright sunny day." },
@@ -137,6 +170,7 @@ async function fetchWeather(latitude, longitude) {
       },
     };
 
+    //We then access the images using keywords and the string.includes() function
     const timePeriod = weatherTime.includes("d") ? "day" : "night";
     const keywords = [
       "clear",
@@ -151,6 +185,7 @@ async function fetchWeather(latitude, longitude) {
 
     const iconData = iconMap[timePeriod][weatherKey];
 
+    //Formatted result to display the weather in a bootstrap style card
     const weatherHTML = `<div class="card mb-3 fw-medium" style="max-width: 800px; margin: auto">
                           <img
                            src=${iconData.src}
