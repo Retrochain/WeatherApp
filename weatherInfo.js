@@ -23,10 +23,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       async (position) => {
         const latit = position.coords.latitude;
         const longi = position.coords.longitude;
-        
+
         // Fetch the location name from lat, lon
         const locationName = await getLocationFromCoords(latit, longi);
-        
+
         // Save the location to sessionStorage for persistence across tabs
         sessionStorage.setItem("savedLocation", locationName);
 
@@ -38,19 +38,58 @@ document.addEventListener("DOMContentLoaded", async () => {
         result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch your location</p>`;
       }
     );
-  } 
+  }
   //Give this error in case no input is provided and geolocation API is not supported by the browser.
   else {
     result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Please input a location</p>`;
   }
+
+  //Display all the previous searches
+  displayRecentSearches();
 });
 
-//Handler function that uses the user input as location 
+async function getLocationFromCoords(lat, lon) {
+  const baseURL = "https://api.openweathermap.org";
+  const endpoint = "/geo/1.0/reverse";
+  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+
+  const queryParams = new URLSearchParams({
+    lat: lat,
+    lon: lon,
+    appid: apiKey,
+    limit: 1,
+  });
+
+  const url = `${baseURL}${endpoint}?${queryParams.toString()}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const body = await response.json();
+    if (body.length > 0) {
+      const { name, state, country } = body[0];
+
+      // Handle missing state or country
+      const locationName = `${name}${
+        state ? `, ${state}` : ""}${
+        country ? `, ${country}` : ""
+      }`;
+      return locationName || "Unknown Location";
+    } else {
+      return "Unknown Location";
+    }
+  } catch (error) {
+    console.error(error);
+    return "Unknown Location";
+  }
+}
+
+//Handler function that uses the user input as location
 async function handleLocation(loc) {
   try {
-    //Set the current location as a sessionStorage item
-    sessionStorage.setItem("savedLocation", loc);
-   
     //Get the latitude and longitude of the location
     const { lat, lon } = await fetchLocation(loc);
 
@@ -103,43 +142,6 @@ async function fetchLocation(param) {
   return { lat: tempLat, lon: tempLon, name: tempName };
 }
 
-async function getLocationFromCoords(lat, lon) {
-  const baseURL = "https://api.openweathermap.org";
-  const endpoint = "/geo/1.0/reverse";
-  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
-
-  const queryParams = new URLSearchParams({
-    lat: lat,
-    lon: lon,
-    appid: apiKey,
-    limit: 1, // Only need one result
-  });
-
-  const url = `${baseURL}${endpoint}?${queryParams.toString()}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const body = await response.json();
-    if (body.length > 0) {
-      const { name, state, country } = body[0];
-
-      // Handle missing state or country
-      const locationName = `${name}${state ? `, ${state}` : ''}${country ? `, ${country}` : ''}`;
-      return locationName || "Unknown Location";
-    } else {
-      return "Unknown Location";
-    }
-  } catch (error) {
-    console.error(error);
-    return "Unknown Location";
-  }
-}
-
-
 //Function that finds the weather of the user's input location.
 async function fetchWeather(latitude, longitude) {
   const baseURL = "https://api.openweathermap.org";
@@ -166,6 +168,9 @@ async function fetchWeather(latitude, longitude) {
 
     const body = await response.json();
 
+    //Call the save function to save the current location and weather
+    saveSearches(body);
+
     //These parameters help us differentiate between day and night, and the different descriptions such as rain, snow, clear, etc.
     const weatherTime = body.weather[0]?.icon || "unknown";
     const weatherDesc = body.weather[0]?.description || "unknown";
@@ -173,43 +178,67 @@ async function fetchWeather(latitude, longitude) {
     //We create an icon map that maps each kind of weather, depending on the time of the day, to a specific header image.
     const iconMap = {
       day: {
-        clear: { src: "imgs/clearday.png", alt: "A bright sunny day." },
-        clouds: { src: "imgs/cloudyday.png", alt: "Closeup of many clouds." },
+        clear: {
+          src: "imgs/clearday.png",
+          alt: "A bright sunny day.",
+          icon: "bi bi-brightness-high",
+        },
+        clouds: {
+          src: "imgs/cloudyday.png",
+          alt: "Closeup of many clouds.",
+          icon: "bi bi-cloud",
+        },
         rain: {
           src: "imgs/rainday.png",
           alt: "Closeup of the wet ground during heavy rain.",
+          icon: "bi bi-cloud-drizzle",
         },
         thunderstorm: {
           src: "imgs/thunderstormday.png",
           alt: "A thunderbolt striking the coast.",
+          icon: "bi bi-cloud-lightning-rain",
         },
         snow: {
           src: "imgs/snowday.png",
           alt: "Closeup of a leaf covered in snow.",
+          icon: "bi bi-snow",
         },
         mist: {
           src: "imgs/foggyday.png",
           alt: "Landscape view of a foggy forest.",
+          icon: "bi bi-cloud-fog",
         },
       },
       night: {
-        clear: { src: "imgs/clearnight.png", alt: "A show of the night sky." },
+        clear: {
+          src: "imgs/clearnight.png",
+          alt: "A show of the night sky.",
+          icon: "bi bi-moon",
+        },
         clouds: {
           src: "imgs/cloudynight.png",
           alt: "A shot of the moon peaking through clouds.",
+          icon: "bi bi-cloud",
         },
         rain: {
           src: "imgs/rainnight.png",
           alt: "Closeup of a window during a rainy night.",
+          icon: "bi bi-cloud-drizzle",
         },
         thunderstorm: {
           src: "imgs/thunderstormnight.png",
           alt: "A thunderbolt striking the coast during the night.",
+          icon: "bi bi-cloud-lightning-rain",
         },
-        snow: { src: "imgs/snownight.png", alt: "Snowfall during the night." },
+        snow: {
+          src: "imgs/snownight.png",
+          alt: "Snowfall during the night.",
+          icon: "bi bi-snow",
+        },
         mist: {
           src: "imgs/foggynight.png",
           alt: "Landscape view of a foggy forest during the night.",
+          icon: "bi bi-cloud-fog",
         },
       },
     };
@@ -245,9 +274,9 @@ async function fetchWeather(latitude, longitude) {
                             <div class="col-md-5 text-center text-md-start">
                               <div class="card-body">
                                 <p class="card-text fw-medium display-2">
-                                <span><i class="bi bi-cloud"></i> ${Math.ceil(
-                                  body.main.temp
-                                )}°</span> F
+                                <span><i class="${
+                                  iconData.icon
+                                }"></i> ${Math.ceil(body.main.temp)}°</span>F
                                 </p>
                                 <p class="card-text h1 ms-0 fw-medium">${
                                   body.weather[0].main
@@ -299,4 +328,68 @@ async function fetchWeather(latitude, longitude) {
   } catch (error) {
     console.error(error);
   }
+}
+
+//Function to save the last 6 recent searches
+async function saveSearches(body) {
+  //Set the required fields to display information
+  const searchEntry = {
+    name: body.name,
+    temp: Math.ceil(body.main.temp),
+    description: body.weather[0].description,
+  };
+
+  //Get the latest search from session storage
+  let recentSearches =
+    JSON.parse(sessionStorage.getItem("recentSearches")) || [];
+
+  //Avoid duplicates
+  recentSearches = recentSearches.filter(
+    (entry) => entry.name !== searchEntry.name
+  );
+  recentSearches.unshift(searchEntry);
+
+  //Remove the oldest location
+  if (recentSearches.length > 6) {
+    recentSearches.pop();
+  }
+
+  //Store the recent searches in sessionStorage
+  sessionStorage.setItem("recentSearches", JSON.stringify(recentSearches));
+
+  //Display the searches
+  displayRecentSearches();
+}
+
+//Function to display the last 6 searches
+function displayRecentSearches() {
+  //Get the DOM element that needs to be manipulated
+  const recentContainer = document.getElementById("recent");
+  recentContainer.innerHTML = "";
+  recentContainer.classList.add("d-flex", "flex-row", "flex-wrap");
+
+  //Get the latest searches to display from sessionStorage
+  const recentSearches =
+    JSON.parse(sessionStorage.getItem("recentSearches")) || [];
+
+  //Display each search along with some info, using search, in a card group
+  recentSearches.forEach((search) => {
+    const searchCard = document.createElement("div");
+    searchCard.classList.add(
+      "card-group",
+      "p-1",
+      "mt-2",
+    );
+    searchCard.style.width = "13rem";
+    searchCard.innerHTML = `<div class="card rounded-4">
+                      <div class="card-body">
+                        <h4 class="card-title">${search.temp}°F</h4>
+                        <h5 class="card-subtitle mb-2 text-body-secondary">${search.name}</h5>
+                        <p class="card-text text-capitalize">
+                          ${search.description}
+                        </p>
+                      </div>
+                      </div>`;
+    recentContainer.appendChild(searchCard);
+  });
 }
