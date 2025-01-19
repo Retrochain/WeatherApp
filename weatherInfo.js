@@ -3,13 +3,16 @@ let result = document.getElementById("weatherResult");
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const location = urlParams.get("locationInput");
+  console.log("Saved Location ", sessionStorage.getItem("savedLocation"));
   const savedLocation = sessionStorage.getItem("savedLocation");
+  console.log("After Setting ", sessionStorage.getItem("savedLocation"));
 
   if (location) {
     try {
+      console.log("Checking if saved ", sessionStorage.getItem("savedLocation"));
       sessionStorage.setItem("savedLocation", location);
+      console.log("Location that was recieved ", sessionStorage.getItem("savedLocation"));
       const { lat, lon } = await fetchLocation(location);
-      console.log(lat, lon);
       if (lat && lon) {
         await fetchWeather(lat, lon);
       } else {
@@ -22,7 +25,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else if (savedLocation) {
     try {
       const { lat, lon } = await fetchLocation(savedLocation);
-      console.log(lat, lon);
       if (lat && lon) {
         await fetchWeather(lat, lon);
       } else {
@@ -51,7 +53,6 @@ async function fetchLocation(param) {
   });
 
   const url = `${baseURL}${endpoint}?${fullQuery.toString()}`;
-  console.log(url);
 
   try {
     const response = await fetch(url);
