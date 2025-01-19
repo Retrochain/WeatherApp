@@ -23,7 +23,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       async (position) => {
         const latit = position.coords.latitude;
         const longi = position.coords.longitude;
-
+        
+        // Save the geolocation to sessionStorage
+        sessionStorage.setItem("savedLocation", `${latit},${longi}`);
+        
         await fetchWeather(latit, longi);
       },
       (error) => {
