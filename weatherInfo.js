@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   //If there is a saved location and the user has not input a location, we can call the helper function on that location instead
   else if (savedLocation) {
-    const [lat, lon] = savedLocation.split(",").map(Number);
     await handleLocation(savedLocation);
   }
   //Otherwise, we can use the geolocation API to get the current user's location without requiring the input
@@ -25,9 +24,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const latit = position.coords.latitude;
         const longi = position.coords.longitude;
         
-        // Save the geolocation to sessionStorage
-        sessionStorage.setItem("savedLocation", `${latit},${longi}`);
+        // Fetch the location name from lat, lon
+        const locationName = await getLocationFromCoords(latit, longi);
         
+        // Save the location to sessionStorage for persistence across tabs
+        sessionStorage.setItem("savedLocation", locationName);
+
+        // Fetch weather using latit, longi
         await fetchWeather(latit, longi);
       },
       (error) => {
@@ -47,7 +50,7 @@ async function handleLocation(loc) {
   try {
     //Set the current location as a sessionStorage item
     sessionStorage.setItem("savedLocation", loc);
-    
+   
     //Get the latitude and longitude of the location
     const { lat, lon } = await fetchLocation(loc);
 
@@ -99,6 +102,43 @@ async function fetchLocation(param) {
 
   return { lat: tempLat, lon: tempLon, name: tempName };
 }
+
+async function getLocationFromCoords(lat, lon) {
+  const baseURL = "https://api.openweathermap.org";
+  const endpoint = "/geo/1.0/reverse";
+  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+
+  const queryParams = new URLSearchParams({
+    lat: lat,
+    lon: lon,
+    appid: apiKey,
+    limit: 1, // Only need one result
+  });
+
+  const url = `${baseURL}${endpoint}?${queryParams.toString()}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const body = await response.json();
+    if (body.length > 0) {
+      const { name, state, country } = body[0];
+
+      // Handle missing state or country
+      const locationName = `${name}${state ? `, ${state}` : ''}${country ? `, ${country}` : ''}`;
+      return locationName || "Unknown Location";
+    } else {
+      return "Unknown Location";
+    }
+  } catch (error) {
+    console.error(error);
+    return "Unknown Location";
+  }
+}
+
 
 //Function that finds the weather of the user's input location.
 async function fetchWeather(latitude, longitude) {
