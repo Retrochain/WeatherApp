@@ -3,11 +3,11 @@ let result = document.getElementById("weatherResult");
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const location = urlParams.get("locationInput");
-  const savedLocation = localStorage.getItem("savedLocation");
+  const savedLocation = sessionStorage.getItem("savedLocation");
 
   if (location) {
     try {
-      localStorage.setItem("savedLocation", location);
+      sessionStorage.setItem("savedLocation", location);
       const { lat, lon } = await fetchLocation(location);
       console.log(lat, lon);
       if (lat && lon) {
