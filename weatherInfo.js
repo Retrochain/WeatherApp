@@ -4,6 +4,9 @@ let result = document.getElementById("weatherResult");
 document.getElementById("unitSelect").addEventListener("change", () => {
   const selectedUnit = document.getElementById("unitSelect").value;
   sessionStorage.setItem("selectedUnit", selectedUnit);
+
+  //Reload the webpage as soon as new unit type is selected
+  location.reload();
 });
 
 //As soon as the DOM content of the page loads, this function starts
