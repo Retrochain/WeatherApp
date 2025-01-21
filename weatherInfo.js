@@ -5,20 +5,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   //We first get the user input from the search form
   const urlParams = new URLSearchParams(window.location.search);
   const location = urlParams.get("locationInput");
+  let unit = urlParams.get("units");
+  if (unit) {
+    document.getElementById("unitSelect").value = unit;
+  } else {
+    unit = "Celsius";
+  }
 
   //We also get the saved location from sessionStorage
   const savedLocation = sessionStorage.getItem("savedLocation");
 
   //If the user has input a location, then we can call the handler function
   if (location) {
-    await handleLocation(location);
+    await handleLocation(location, unit);
   }
   //If there is a saved location and the user has not input a location, we can call the helper function on that location instead
   else if (savedLocation) {
-    await handleLocation(savedLocation);
+    await handleLocation(savedLocation, unit);
   }
   //Otherwise, we can use the geolocation API to get the current user's location without requiring the input
   else if ("geolocation" in navigator) {
+    console.log("hello");
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const latit = position.coords.latitude;
@@ -31,7 +38,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         sessionStorage.setItem("savedLocation", locationName);
 
         // Fetch weather using latit, longi
-        await fetchWeather(latit, longi);
+        await fetchWeather(latit, longi, unit);
       },
       (error) => {
         console.error("Error fetching current location:", error);
@@ -88,14 +95,14 @@ async function getLocationFromCoords(lat, lon) {
 }
 
 //Handler function that uses the user input as location
-async function handleLocation(loc) {
+async function handleLocation(loc, unit) {
   try {
     //Get the latitude and longitude of the location
     const { lat, lon } = await fetchLocation(loc);
 
     //If successful, find the weather of the location
     if (lat && lon) {
-      await fetchWeather(lat, lon);
+      await fetchWeather(lat, lon, unit);
     } else {
       result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Location not found!</p>`;
     }
@@ -143,16 +150,27 @@ async function fetchLocation(param) {
 }
 
 //Function that finds the weather of the user's input location.
-async function fetchWeather(latitude, longitude) {
+async function fetchWeather(latitude, longitude, unit) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/data/2.5/weather";
   const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+  let selectedUnits = "standard";
+  let windUnit = "m/s";
+  let visibilityUnit = "km";
+
+  if (unit == "Celsius") {
+    selectedUnits = "metric";
+  } else if (unit == "Farenheit") {
+    selectedUnits = "imperial";
+    windUnit = "m/h";
+    visibilityUnit = "m";
+  }
 
   const queryParams = new URLSearchParams({
     lat: latitude,
     lon: longitude,
     appid: apiKey,
-    units: "imperial",
+    units: selectedUnits,
   });
 
   //Using our location and URL parameters, we create a URL string
@@ -169,7 +187,7 @@ async function fetchWeather(latitude, longitude) {
     const body = await response.json();
 
     //Call the save function to save the current location and weather
-    saveSearches(body);
+    saveSearches(body, unit);
 
     //These parameters help us differentiate between day and night, and the different descriptions such as rain, snow, clear, etc.
     const weatherTime = body.weather[0]?.icon || "unknown";
@@ -243,6 +261,16 @@ async function fetchWeather(latitude, longitude) {
       },
     };
 
+    //Create synonyms for additional descriptions of the weather that match existing ones
+    const synonyms = {
+      smoke: "mist",
+      haze: "mist",
+      fog: "mist",
+      dust: "mist",
+      sleet: "snow",
+      drizzle: "rain",
+    };
+
     //We then access the images using keywords and the string.includes() function
     const timePeriod = weatherTime.includes("d") ? "day" : "night";
     const keywords = [
@@ -253,13 +281,20 @@ async function fetchWeather(latitude, longitude) {
       "snow",
       "mist",
     ];
-    const weatherKey =
+    let weatherKey =
       keywords.find((key) => weatherDesc.includes(key)) || "default";
+
+    //If our weather description includes a synonym, then we replace it with our defined keywords
+    Object.keys(synonyms).forEach((synonym) => {
+      if (weatherDesc.includes(synonym)) {
+        weatherKey = synonyms[synonym];
+      }
+    });
 
     const iconData = iconMap[timePeriod][weatherKey];
 
     //Formatted result to display the weather in a bootstrap style card
-    const weatherHTML = `<div class="card mb-3 fw-medium" style="max-width: 800px; margin: auto">
+    const weatherHTML = `<div class="card mb-3 fw-medium shadow" style="max-width: 800px; margin: auto">
                           <img
                            src=${iconData.src}
                            class="card-img-top rounded d-block img-fluid mx-auto"
@@ -276,7 +311,7 @@ async function fetchWeather(latitude, longitude) {
                                 <p class="card-text fw-medium display-2">
                                 <span><i class="${
                                   iconData.icon
-                                }"></i> ${Math.ceil(body.main.temp)}°</span>F
+                                }"></i> ${Math.ceil(body.main.temp)}°</span>${unit.charAt(0)}
                                 </p>
                                 <p class="card-text h1 ms-0 fw-medium">${
                                   body.weather[0].main
@@ -287,10 +322,10 @@ async function fetchWeather(latitude, longitude) {
                                   ${body.weather[0].description}
                                 </p>
                                 <span class="fw-semibold"
-                                  >Min: ${Math.ceil(body.main.temp_min)}°F
+                                  >Min: ${Math.ceil(body.main.temp_min)}°${unit.charAt(0)}
                                 </span>
                                 <span class="fw-semibold">
-                                  Max: ${Math.ceil(body.main.temp_max)}°F</span
+                                  Max: ${Math.ceil(body.main.temp_max)}°${unit.charAt(0)}</span
                                 >
                               </div>
                             </div>
@@ -298,9 +333,7 @@ async function fetchWeather(latitude, longitude) {
                             <ul class="list-group list-group-flush text-center text-md-start">
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Feels like</span>
-                                <span>${Math.ceil(
-                                  body.main.feels_like
-                                )}°F</span>
+                                <span>${Math.ceil(body.main.feels_like)}°F</span>
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Humidity</span>
@@ -312,11 +345,23 @@ async function fetchWeather(latitude, longitude) {
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Wind Speed</span>
-                                <span>${body.wind.speed} mph</span>
+                                <span>${body.wind.speed} ${windUnit}</span>
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
-                                <span>Wind Gust</span>
-                                <span>${body.wind.gust} mph</span>
+                                <span>Wind Direction</span>
+                                <span>${body.wind.deg}°</span>
+                              </li>
+                              <li class="list-group-item d-flex justify-content-between">
+                                <span>Visibility</span>
+                                <span>${
+                                  visibilityUnit === "km"
+                                    ? `${(body.visibility / 1000).toFixed(1)} km`
+                                    : `${(body.visibility / 1609.344).toFixed(1)} miles`
+                                }</span>
+                              </li>
+                              <li class="list-group-item d-flex justify-content-between">
+                                <span>Cloudiness</span>
+                                <span>${body.clouds.all} %</span>
                               </li>
                             </ul>
                           </div>
@@ -331,12 +376,13 @@ async function fetchWeather(latitude, longitude) {
 }
 
 //Function to save the last 6 recent searches
-async function saveSearches(body) {
+async function saveSearches(body, unit) {
   //Set the required fields to display information
   const searchEntry = {
     name: body.name,
     temp: Math.ceil(body.main.temp),
     description: body.weather[0].description,
+    units: unit.charAt(0),
   };
 
   //Get the latest search from session storage
@@ -375,21 +421,17 @@ function displayRecentSearches() {
   //Display each search along with some info, using search, in a card group
   recentSearches.forEach((search) => {
     const searchCard = document.createElement("div");
-    searchCard.classList.add(
-      "card-group",
-      "p-1",
-      "mt-2",
-    );
+    searchCard.classList.add("card-group", "p-1", "mt-2");
     searchCard.style.width = "13rem";
-    searchCard.innerHTML = `<div class="card rounded-4">
-                      <div class="card-body">
-                        <h4 class="card-title">${search.temp}°F</h4>
-                        <h5 class="card-subtitle mb-2 text-body-secondary">${search.name}</h5>
-                        <p class="card-text text-capitalize">
-                          ${search.description}
-                        </p>
-                      </div>
-                      </div>`;
+    searchCard.innerHTML = `<div class="card rounded-4 shadow-sm">
+                              <div class="card-body">
+                                <h4 class="card-title">${search.temp}°${search.units}</h4>
+                                <h5 class="card-subtitle mb-2 text-body-secondary">${search.name}</h5>
+                                <p class="card-text text-capitalize">
+                                  ${search.description}
+                                </p>
+                              </div>
+                            </div>`;
     recentContainer.appendChild(searchCard);
   });
 }
