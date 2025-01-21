@@ -1,15 +1,22 @@
 let result = document.getElementById("weatherResult");
 
+//When the selected unit is changed, add that to the session storage for future use
+document.getElementById("unitSelect").addEventListener("change", () => {
+  const selectedUnit = document.getElementById("unitSelect").value;
+  sessionStorage.setItem("selectedUnit", selectedUnit);
+});
+
 //As soon as the DOM content of the page loads, this function starts
 document.addEventListener("DOMContentLoaded", async () => {
   //We first get the user input from the search form
   const urlParams = new URLSearchParams(window.location.search);
   const location = urlParams.get("locationInput");
-  let unit = urlParams.get("units");
+  
+  //Either use the stored unit, or the default Celsius value 
+  let unit = sessionStorage.getItem("selectedUnit") || "Celsius";
   if (unit) {
+    //Set the value of the dropdown to the current selected unit
     document.getElementById("unitSelect").value = unit;
-  } else {
-    unit = "Celsius";
   }
 
   //We also get the saved location from sessionStorage
@@ -309,9 +316,7 @@ async function fetchWeather(latitude, longitude, unit) {
                             <div class="col-md-5 text-center text-md-start">
                               <div class="card-body">
                                 <p class="card-text fw-medium display-2">
-                                <span><i class="${
-                                  iconData.icon
-                                }"></i> ${Math.ceil(body.main.temp)}°</span>${unit.charAt(0)}
+                                <span><i class="${iconData.icon}"></i> ${Math.ceil(body.main.temp)}°</span>${unit.charAt(0)}
                                 </p>
                                 <p class="card-text h1 ms-0 fw-medium">${
                                   body.weather[0].main
@@ -333,7 +338,7 @@ async function fetchWeather(latitude, longitude, unit) {
                             <ul class="list-group list-group-flush text-center text-md-start">
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Feels like</span>
-                                <span>${Math.ceil(body.main.feels_like)}°F</span>
+                                <span>${Math.ceil(body.main.feels_like)}°${unit.charAt(0)}</span>
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Humidity</span>
