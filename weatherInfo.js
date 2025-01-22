@@ -1,3 +1,5 @@
+import { showDetails, saveSearches, displayRecentSearches } from "./recent.js";
+
 let result = document.getElementById("weatherResult");
 
 //When the selected unit is changed, add that to the session storage for future use
@@ -5,60 +7,75 @@ document.getElementById("unitSelect").addEventListener("change", () => {
   const selectedUnit = document.getElementById("unitSelect").value;
   sessionStorage.setItem("selectedUnit", selectedUnit);
 
-  //Reload the webpage as soon as new unit type is selected
   location.reload();
 });
 
 //As soon as the DOM content of the page loads, this function starts
 document.addEventListener("DOMContentLoaded", async () => {
+  if (!result) {
+    return;
+  }
   //We first get the user input from the search form
   const urlParams = new URLSearchParams(window.location.search);
   const location = urlParams.get("locationInput");
-  
-  //Either use the stored unit, or the default Celsius value 
-  let unit = sessionStorage.getItem("selectedUnit") || "Celsius";
-  if (unit) {
-    //Set the value of the dropdown to the current selected unit
-    document.getElementById("unitSelect").value = unit;
-  }
 
-  //We also get the saved location from sessionStorage
-  const savedLocation = sessionStorage.getItem("savedLocation");
+  // Retrieve latitude and longitude from the query string from recent.js
+  const lat = urlParams.get("lat");
+  const lon = urlParams.get("lon");
 
-  //If the user has input a location, then we can call the handler function
-  if (location) {
-    await handleLocation(location, unit);
-  }
-  //If there is a saved location and the user has not input a location, we can call the helper function on that location instead
-  else if (savedLocation) {
-    await handleLocation(savedLocation, unit);
-  }
-  //Otherwise, we can use the geolocation API to get the current user's location without requiring the input
-  else if ("geolocation" in navigator) {
-    console.log("hello");
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const latit = position.coords.latitude;
-        const longi = position.coords.longitude;
+  // Check if values exist from the query and use them
+  if (lat && lon) {
+    // Pass those lat and lon coords to display additional information from recent history
+    fetchWeather(lat, lon, sessionStorage.getItem("selectedUnit"));
+    //Set the value of the dropdown to the stored unit
+    document.getElementById("unitSelect").value =
+      sessionStorage.getItem("selectedUnit") || "Farenheit";
+  } else {
+    //Either use the stored unit, or the default Farenheit value
+    let unit = sessionStorage.getItem("selectedUnit") || "Farenheit";
+    if (unit) {
+      //Set the value of the dropdown to the current selected unit
+      document.getElementById("unitSelect").value = unit;
+    }
 
-        // Fetch the location name from lat, lon
-        const locationName = await getLocationFromCoords(latit, longi);
+    //We also get the saved location from sessionStorage
+    const savedLocation = sessionStorage.getItem("savedLocation");
 
-        // Save the location to sessionStorage for persistence across tabs
-        sessionStorage.setItem("savedLocation", locationName);
+    //If the user has input a location, then we can call the handler function
+    if (location) {
+      await handleLocation(location, unit);
+    }
+    //If there is a saved location and the user has not input a location, we can call the helper function on that location instead
+    else if (savedLocation) {
+      await handleLocation(savedLocation, unit);
+    }
+    //Otherwise, we can use the geolocation API to get the current user's location without requiring the input
+    else if ("geolocation" in navigator) {
+      console.log("hello");
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const latit = position.coords.latitude;
+          const longi = position.coords.longitude;
 
-        // Fetch weather using latit, longi
-        await fetchWeather(latit, longi, unit);
-      },
-      (error) => {
-        console.error("Error fetching current location:", error);
-        result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch your location</p>`;
-      }
-    );
-  }
-  //Give this error in case no input is provided and geolocation API is not supported by the browser.
-  else {
-    result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Please input a location</p>`;
+          // Fetch the location name from lat, lon
+          const locationName = await getLocationFromCoords(latit, longi);
+
+          // Save the location to sessionStorage for persistence across tabs
+          sessionStorage.setItem("savedLocation", locationName);
+
+          // Fetch weather using latit, longi
+          await fetchWeather(latit, longi, unit);
+        },
+        (error) => {
+          console.error("Error fetching current location:", error);
+          result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Unable to fetch your location</p>`;
+        }
+      );
+    }
+    //Give this error in case no input is provided and geolocation API is not supported by the browser.
+    else {
+      result.innerHTML = `<p class="display-2 text-center fw-semibold"><i class="bi bi-exclamation-triangle"></i><br>Please input a location</p>`;
+    }
   }
 
   //Display all the previous searches
@@ -90,8 +107,7 @@ async function getLocationFromCoords(lat, lon) {
       const { name, state, country } = body[0];
 
       // Handle missing state or country
-      const locationName = `${name}${
-        state ? `, ${state}` : ""}${
+      const locationName = `${name}${state ? `, ${state}` : ""}${
         country ? `, ${country}` : ""
       }`;
       return locationName || "Unknown Location";
@@ -195,9 +211,6 @@ async function fetchWeather(latitude, longitude, unit) {
     }
 
     const body = await response.json();
-
-    //Call the save function to save the current location and weather
-    saveSearches(body, unit);
 
     //These parameters help us differentiate between day and night, and the different descriptions such as rain, snow, clear, etc.
     const weatherTime = body.weather[0]?.icon || "unknown";
@@ -303,6 +316,9 @@ async function fetchWeather(latitude, longitude, unit) {
 
     const iconData = iconMap[timePeriod][weatherKey];
 
+    //Call the save function to save the current location and weather
+    saveSearches(body, unit, iconData.icon);
+
     //Formatted result to display the weather in a bootstrap style card
     const weatherHTML = `<div class="card mb-3 fw-medium shadow" style="max-width: 800px; margin: auto">
                           <img
@@ -319,7 +335,11 @@ async function fetchWeather(latitude, longitude, unit) {
                             <div class="col-md-5 text-center text-md-start">
                               <div class="card-body">
                                 <p class="card-text fw-medium display-2">
-                                <span><i class="${iconData.icon}"></i> ${Math.ceil(body.main.temp)}°</span>${unit.charAt(0)}
+                                <span><i class="${
+                                  iconData.icon
+                                }"></i> ${Math.ceil(
+      body.main.temp
+    )}°</span>${unit.charAt(0)}
                                 </p>
                                 <p class="card-text h1 ms-0 fw-medium">${
                                   body.weather[0].main
@@ -330,10 +350,14 @@ async function fetchWeather(latitude, longitude, unit) {
                                   ${body.weather[0].description}
                                 </p>
                                 <span class="fw-semibold"
-                                  >Min: ${Math.ceil(body.main.temp_min)}°${unit.charAt(0)}
+                                  >Min: ${Math.ceil(
+                                    body.main.temp_min
+                                  )}°${unit.charAt(0)}
                                 </span>
                                 <span class="fw-semibold">
-                                  Max: ${Math.ceil(body.main.temp_max)}°${unit.charAt(0)}</span
+                                  Max: ${Math.ceil(
+                                    body.main.temp_max
+                                  )}°${unit.charAt(0)}</span
                                 >
                               </div>
                             </div>
@@ -341,7 +365,9 @@ async function fetchWeather(latitude, longitude, unit) {
                             <ul class="list-group list-group-flush text-center text-md-start">
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Feels like</span>
-                                <span>${Math.ceil(body.main.feels_like)}°${unit.charAt(0)}</span>
+                                <span>${Math.ceil(
+                                  body.main.feels_like
+                                )}°${unit.charAt(0)}</span>
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Humidity</span>
@@ -363,8 +389,12 @@ async function fetchWeather(latitude, longitude, unit) {
                                 <span>Visibility</span>
                                 <span>${
                                   visibilityUnit === "km"
-                                    ? `${(body.visibility / 1000).toFixed(1)} km`
-                                    : `${(body.visibility / 1609.344).toFixed(1)} miles`
+                                    ? `${(body.visibility / 1000).toFixed(
+                                        1
+                                      )} km`
+                                    : `${(body.visibility / 1609.344).toFixed(
+                                        1
+                                      )} miles`
                                 }</span>
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
@@ -381,65 +411,4 @@ async function fetchWeather(latitude, longitude, unit) {
   } catch (error) {
     console.error(error);
   }
-}
-
-//Function to save the last 6 recent searches
-async function saveSearches(body, unit) {
-  //Set the required fields to display information
-  const searchEntry = {
-    name: body.name,
-    temp: Math.ceil(body.main.temp),
-    description: body.weather[0].description,
-    units: unit.charAt(0),
-  };
-
-  //Get the latest search from session storage
-  let recentSearches =
-    JSON.parse(sessionStorage.getItem("recentSearches")) || [];
-
-  //Avoid duplicates
-  recentSearches = recentSearches.filter(
-    (entry) => entry.name !== searchEntry.name
-  );
-  recentSearches.unshift(searchEntry);
-
-  //Remove the oldest location
-  if (recentSearches.length > 6) {
-    recentSearches.pop();
-  }
-
-  //Store the recent searches in sessionStorage
-  sessionStorage.setItem("recentSearches", JSON.stringify(recentSearches));
-
-  //Display the searches
-  displayRecentSearches();
-}
-
-//Function to display the last 6 searches
-function displayRecentSearches() {
-  //Get the DOM element that needs to be manipulated
-  const recentContainer = document.getElementById("recent");
-  recentContainer.innerHTML = "";
-  recentContainer.classList.add("d-flex", "flex-row", "flex-wrap");
-
-  //Get the latest searches to display from sessionStorage
-  const recentSearches =
-    JSON.parse(sessionStorage.getItem("recentSearches")) || [];
-
-  //Display each search along with some info, using search, in a card group
-  recentSearches.forEach((search) => {
-    const searchCard = document.createElement("div");
-    searchCard.classList.add("card-group", "p-1", "mt-2");
-    searchCard.style.width = "13rem";
-    searchCard.innerHTML = `<div class="card rounded-4 shadow-sm">
-                              <div class="card-body">
-                                <h4 class="card-title">${search.temp}°${search.units}</h4>
-                                <h5 class="card-subtitle mb-2 text-body-secondary">${search.name}</h5>
-                                <p class="card-text text-capitalize">
-                                  ${search.description}
-                                </p>
-                              </div>
-                            </div>`;
-    recentContainer.appendChild(searchCard);
-  });
 }
