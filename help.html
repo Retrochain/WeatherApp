@@ -37,12 +37,15 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
+              <a class="nav-link active" href="history.html">History</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link active" aria-current="page" href="help.html"
                 >Help</a
               >
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="aboutMe.html">About Me</a>
+              <a class="nav-link active" href="aboutMe.html">About Me</a>
             </li>
           </ul>
           <form
@@ -59,7 +62,16 @@
               aria-label="Search"
               name="locationInput"
               id="locationInput"
-            />
+            /><select
+              class="form-select shadow-sm border-1 border-secondary me-2"
+              id="unitSelect"
+              aria-label="Select Temperature Units"
+              style="width: 130px"
+            >
+              <option value="Farenheit">Farenheit</option>
+              <option value="Celsius">Celsius</option>
+              <option value="Kelvin">Kelvin</option>
+            </select>
             <button class="btn btn-outline-primary" type="submit">
               <i class="bi bi-search"></i>
             </button>
@@ -86,14 +98,36 @@
             </button>
           </h2>
           <div id="collapseOverview" class="accordion-collapse collapse show">
-            <div class="accordion-body p-3">
-              This website allows users to quickly check the current weather of
-              any location by simply entering a City, State Code (Optional), and
-              Country Code, into the search bar!<br />
+            <div class="accordion-body p-3 lh-base">
+              The Weather page will show you your current location's weather in
+              Farenheit.<br />
+              To search a different location's weather, please enter the
+              <b>City, State Code, and Country Code</b> for the location. <br />
+              The State Code is only applicable to US locations,
+              <i
+                >however you can add the state code for other countries if they
+                exist</i
+              >, but both the City name and Country Code are required for a
+              proper search.
+              <br />
+              You can change the units of measure from <b>Farenheit</b> to
+              <b>Celsius</b> and even <b>Kelvin</b>, which also changes the
+              additional weather information units from imperial to metric, or
+              vice versa. <br />
               For users residing in the States, please enter your State Code,
               such as TX (Texas), NY (New York), CA (California), etc.<br />
-              Alternatively, users can also input their Zip or Postal Code,
-              followed by their Country Code.
+              <del
+                >*Alternatively, users can also input their Zip or Postal Code,
+                followed by their Country Code.</del
+              ><br />
+              The weather card displays the current location, the current
+              weather (in selected units), the broad label for the weather, a
+              descriptive label for the weather, a header image that accurately
+              visualizes the current weather type, and a side panel that shows
+              additional information regarding the weather.<br />
+              The last 24 location/weather seaches are shown in the
+              <b>History</b> tab, press <b>View Details</b> to view the weather
+              again, this time in your default selected units!<br />
             </div>
           </div>
         </div>
@@ -111,13 +145,14 @@
             </button>
           </h2>
           <div id="collapseHIW" class="accordion-collapse collapse show">
-            <div class="accordion-body p-3">
+            <div class="accordion-body p-3 lh-base">
               The site uses <b>OpenWeathers Weather API</b> and
               <b>Geocoding API</b> to fetch accurate weather data for the
-              specified location. Results are dynamically displayed using
-              JavaScript DOM manipulation, combined with the sleek styling
-              capabilities of the Bootstrap CSS library, thus ensuring an
-              organized and visually appealing user experience.
+              specified location, while it uses the HTML built-in Geolocation
+              API to fetch the current location of the user. Results are
+              dynamically displayed using JavaScript DOM manipulation, combined
+              with the sleek styling capabilities of the Bootstrap CSS library,
+              thus ensuring an organized and visually appealing user experience.
             </div>
           </div>
         </div>
@@ -135,7 +170,7 @@
             </button>
           </h2>
           <div id="collapseFootend" class="accordion-collapse collapse show">
-            <div class="accordion-body p-3">
+            <div class="accordion-body p-3 lh-base">
               The purpose of this website is to learn how APIs, Bootstrap, and
               front-end JavaScript works, and to seemlessly implement it
               together. This project is not monitzed and is strictly built for
@@ -145,7 +180,21 @@
         </div>
       </div>
     </div>
-    <script type="text/javascript" src="weatherInfo.js"></script>
+    <script type="module" src="weatherInfo.js"></script>
+    <script>
+      //This script is to ensure the selected unit is persistent across all webpages
+      document.addEventListener("DOMContentLoaded", () => {
+        const unit = document.getElementById("unitSelect");
+        const selectedUnit =
+          sessionStorage.getItem("selectedUnit") || "Farenheit";
+        unit.value = selectedUnit;
+
+        unit.addEventListener("change", () => {
+          const selectedUnit = unit.value;
+          sessionStorage.setItem("selectedUnit", selectedUnit);
+        });
+      });
+    </script>
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
       integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
