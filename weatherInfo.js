@@ -2,14 +2,6 @@ import { showDetails, saveSearches, displayRecentSearches } from "./recent.js";
 
 let result = document.getElementById("weatherResult");
 
-//When the selected unit is changed, add that to the session storage for future use
-document.getElementById("unitSelect").addEventListener("change", () => {
-  const selectedUnit = document.getElementById("unitSelect").value;
-  sessionStorage.setItem("selectedUnit", selectedUnit);
-
-  location.reload();
-});
-
 //As soon as the DOM content of the page loads, this function starts
 document.addEventListener("DOMContentLoaded", async () => {
   if (!result) {
@@ -26,7 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check if values exist from the query and use them
   if (lat && lon) {
     // Pass those lat and lon coords to display additional information from recent history
-    fetchWeather(lat, lon, sessionStorage.getItem("selectedUnit"));
+    fetchWeather(lat, lon, sessionStorage.getItem("selectedUnit") || "Farenheit");
     //Set the value of the dropdown to the stored unit
     document.getElementById("unitSelect").value =
       sessionStorage.getItem("selectedUnit") || "Farenheit";
@@ -37,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       //Set the value of the dropdown to the current selected unit
       document.getElementById("unitSelect").value = unit;
     }
+
 
     //We also get the saved location from sessionStorage
     const savedLocation = sessionStorage.getItem("savedLocation");
@@ -192,6 +185,7 @@ async function fetchWeather(latitude, longitude, unit) {
     visibilityUnit = "m";
   }
 
+
   const queryParams = new URLSearchParams({
     lat: latitude,
     lon: longitude,
@@ -337,9 +331,7 @@ async function fetchWeather(latitude, longitude, unit) {
                                 <p class="card-text fw-medium display-2">
                                 <span><i class="${
                                   iconData.icon
-                                }"></i> ${Math.ceil(
-      body.main.temp
-    )}°</span>${unit.charAt(0)}
+                                }"></i> ${Math.ceil(body.main.temp)}°</span>${unit.charAt(0)}
                                 </p>
                                 <p class="card-text h1 ms-0 fw-medium">${
                                   body.weather[0].main
