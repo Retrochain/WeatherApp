@@ -1,4 +1,4 @@
-import { showDetails, saveSearches, displayRecentSearches } from "./recent.js";
+import { showDetails, saveSearches, displayRecentSearches } from "recent.js";
 
 let result = document.getElementById("weatherResult");
 
