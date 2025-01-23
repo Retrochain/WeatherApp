@@ -18,7 +18,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Check if values exist from the query and use them
   if (lat && lon) {
     // Pass those lat and lon coords to display additional information from recent history
-    fetchWeather(lat, lon, sessionStorage.getItem("selectedUnit") || "Farenheit");
+    fetchWeather(
+      lat,
+      lon,
+      sessionStorage.getItem("selectedUnit") || "Farenheit"
+    );
     //Set the value of the dropdown to the stored unit
     document.getElementById("unitSelect").value =
       sessionStorage.getItem("selectedUnit") || "Farenheit";
@@ -29,7 +33,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       //Set the value of the dropdown to the current selected unit
       document.getElementById("unitSelect").value = unit;
     }
-
 
     //We also get the saved location from sessionStorage
     const savedLocation = sessionStorage.getItem("savedLocation");
@@ -113,11 +116,25 @@ async function getLocationFromCoords(lat, lon) {
   }
 }
 
+//Function to check if the entered input is a Zip Code
+function isPostalCode(str) {
+  const postalCodeRegEx = /^[A-Za-z0-9\s-]{3,10},[A-Za-z]{2,4}$/;
+
+  return postalCodeRegEx.test(str);
+}
+
 //Handler function that uses the user input as location
 async function handleLocation(loc, unit) {
   try {
-    //Get the latitude and longitude of the location
-    const { lat, lon } = await fetchLocation(loc);
+    let lat, lon;
+
+    //Get the latitude and longitude of the location by checking if it is a Zip or City Name
+    if (isPostalCode(loc.replace(/\s+/g, ""))) {
+      console.log("h");
+      ({ lat, lon } = await fetchLocationWithZip(loc.replace(/\s+/g, "")));
+    } else {
+      ({ lat, lon } = await fetchLocationWithName(loc.replace(/\s+/g, "")));
+    }
 
     //If successful, find the weather of the location
     if (lat && lon) {
@@ -131,14 +148,43 @@ async function handleLocation(loc, unit) {
   }
 }
 
+async function fetchLocationWithZip(param) {
+  const baseURL = "https://api.openweathermap.org";
+  const endpoint = "/geo/1.0/zip";
+  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+
+  const fullQuery = new URLSearchParams({
+    zip: param,
+    appid: apiKey,
+  });
+  //Using our location and URL parameters, we create a URL string
+  const url = `${baseURL}${endpoint}?${fullQuery.toString()}`;
+  console.log(url);
+
+  try {
+    //Using fetch, we communicate with the OpenWeather Geoencoding API
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    //Return the latitude and longitude of the current location if successful
+    const body = await response.json();
+    console.log(body);
+
+    return { lat: body.lat, lon: body.lon, name: body.name };
+  } catch (error) {
+    console.error(error);
+    return { lat: null, lon: null, name: null };
+  }
+}
+
 //Function that finds the latitude and longitude of the user's input location.
-async function fetchLocation(param) {
+async function fetchLocationWithName(param) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/direct";
   const apiKey = "4accb0b517ed443bf0664626a4ef6368";
-  const tempLat = 0;
-  const tempLon = 0;
-  const tempName = " ";
 
   const fullQuery = new URLSearchParams({
     q: param,
@@ -163,9 +209,8 @@ async function fetchLocation(param) {
     return { lat, lon, name };
   } catch (error) {
     console.error(error);
+    return { lat: null, lon: null, name: null };
   }
-
-  return { lat: tempLat, lon: tempLon, name: tempName };
 }
 
 //Function that finds the weather of the user's input location.
@@ -184,7 +229,6 @@ async function fetchWeather(latitude, longitude, unit) {
     windUnit = "m/h";
     visibilityUnit = "m";
   }
-
 
   const queryParams = new URLSearchParams({
     lat: latitude,
@@ -331,7 +375,9 @@ async function fetchWeather(latitude, longitude, unit) {
                                 <p class="card-text fw-medium display-2">
                                 <span><i class="${
                                   iconData.icon
-                                }"></i> ${Math.ceil(body.main.temp)}°</span>${unit.charAt(0)}
+                                }"></i> ${Math.ceil(
+      body.main.temp
+    )}°</span>${unit.charAt(0)}
                                 </p>
                                 <p class="card-text h1 ms-0 fw-medium">${
                                   body.weather[0].main
