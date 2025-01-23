@@ -133,7 +133,7 @@ async function handleLocation(loc, unit) {
       console.log("h");
       ({ lat, lon } = await fetchLocationWithZip(loc.replace(/\s+/g, "")));
     } else {
-      ({ lat, lon } = await fetchLocationWithName(loc.replace(/\s+/g, "")));
+      ({ lat, lon } = await fetchLocationWithName(loc));
     }
 
     //If successful, find the weather of the location
