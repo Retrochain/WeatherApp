@@ -119,8 +119,10 @@ async function getLocationFromCoords(lat, lon) {
 //Function to check if the entered input is a Zip Code
 function isPostalCode(str) {
   const postalCodeRegEx = /^[A-Za-z0-9\s-]{3,10},[A-Za-z]{2,4}$/;
+  const locationRegEx = /^[A-Za-z\s-]{3,10},[A-Za-z]{2,4}$/;
+  console.log(postalCodeRegEx.test(str) == locationRegEx.test(str));
 
-  return postalCodeRegEx.test(str);
+  return postalCodeRegEx.test(str) == locationRegEx.test(str);
 }
 
 //Handler function that uses the user input as location
@@ -129,8 +131,7 @@ async function handleLocation(loc, unit) {
     let lat, lon;
 
     //Get the latitude and longitude of the location by checking if it is a Zip or City Name
-    if (isPostalCode(loc.replace(/\s+/g, ""))) {
-      console.log("h");
+    if (!isPostalCode(loc.replace(/\s+/g, ""))) {
       ({ lat, lon } = await fetchLocationWithZip(loc.replace(/\s+/g, "")));
     } else {
       ({ lat, lon } = await fetchLocationWithName(loc));
@@ -159,7 +160,6 @@ async function fetchLocationWithZip(param) {
   });
   //Using our location and URL parameters, we create a URL string
   const url = `${baseURL}${endpoint}?${fullQuery.toString()}`;
-  console.log(url);
 
   try {
     //Using fetch, we communicate with the OpenWeather Geoencoding API
@@ -171,7 +171,6 @@ async function fetchLocationWithZip(param) {
 
     //Return the latitude and longitude of the current location if successful
     const body = await response.json();
-    console.log(body);
 
     return { lat: body.lat, lon: body.lon, name: body.name };
   } catch (error) {
