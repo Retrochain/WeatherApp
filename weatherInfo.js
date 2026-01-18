@@ -47,7 +47,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     //Otherwise, we can use the geolocation API to get the current user's location without requiring the input
     else if ("geolocation" in navigator) {
-      console.log("hello");
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const latit = position.coords.latitude;
@@ -120,7 +119,6 @@ async function getLocationFromCoords(lat, lon) {
 function isPostalCode(str) {
   const postalCodeRegEx = /^[A-Za-z0-9\s-]{3,10},[A-Za-z]{2,4}$/;
   const locationRegEx = /^[A-Za-z\s-]{3,10},[A-Za-z]{2,4}$/;
-  console.log(postalCodeRegEx.test(str) == locationRegEx.test(str));
 
   return postalCodeRegEx.test(str) == locationRegEx.test(str);
 }
