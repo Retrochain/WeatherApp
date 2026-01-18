@@ -1,4 +1,6 @@
-import { showDetails, saveSearches, displayRecentSearches } from "./recent.js";
+require('dotenv').config();
+
+import { saveSearches, displayRecentSearches } from "./recent.js";
 
 let result = document.getElementById("weatherResult");
 
@@ -8,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   //We first get the user input from the search form
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(globalThis.location.search);
   const location = urlParams.get("locationInput");
 
   // Retrieve latitude and longitude from the query string from recent.js
@@ -81,7 +83,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function getLocationFromCoords(lat, lon) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/reverse";
-  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+  const apiKey = process.env.API_KEY;
 
   const queryParams = new URLSearchParams({
     lat: lat,
@@ -103,9 +105,9 @@ async function getLocationFromCoords(lat, lon) {
       const { name, state, country } = body[0];
 
       // Handle missing state or country
-      const locationName = `${name}${state ? `, ${state}` : ""}${
-        country ? `, ${country}` : ""
-      }`;
+      const stateStr = state ? `, ${state}` : "";
+      const countryStr = country ? `, ${country}` : "";
+      const locationName = `${name}${stateStr}${countryStr}`;
       return locationName || "Unknown Location";
     } else {
       return "Unknown Location";
@@ -131,10 +133,10 @@ async function handleLocation(loc, unit) {
     let lat, lon;
 
     //Get the latitude and longitude of the location by checking if it is a Zip or City Name
-    if (!isPostalCode(loc.replace(/\s+/g, ""))) {
-      ({ lat, lon } = await fetchLocationWithZip(loc.replace(/\s+/g, "")));
-    } else {
+    if (isPostalCode(loc.replaceAll(/\s+/g, ""))) {
       ({ lat, lon } = await fetchLocationWithName(loc));
+    } else {
+      ({ lat, lon } = await fetchLocationWithZip(loc.replaceAll(/\s+/g, "")));
     }
 
     //If successful, find the weather of the location
@@ -152,7 +154,7 @@ async function handleLocation(loc, unit) {
 async function fetchLocationWithZip(param) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/zip";
-  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+  const apiKey = process.env.API_KEY;
 
   const fullQuery = new URLSearchParams({
     zip: param,
@@ -183,7 +185,7 @@ async function fetchLocationWithZip(param) {
 async function fetchLocationWithName(param) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/direct";
-  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+  const apiKey = process.env.API_KEY;
 
   const fullQuery = new URLSearchParams({
     q: param,
@@ -216,7 +218,7 @@ async function fetchLocationWithName(param) {
 async function fetchWeather(latitude, longitude, unit) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/data/2.5/weather";
-  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
+  const apiKey = process.env.API_KEY;
   let selectedUnits = "standard";
   let windUnit = "m/s";
   let visibilityUnit = "km";
@@ -424,15 +426,7 @@ async function fetchWeather(latitude, longitude, unit) {
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Visibility</span>
-                                <span>${
-                                  visibilityUnit === "km"
-                                    ? `${(body.visibility / 1000).toFixed(
-                                        1
-                                      )} km`
-                                    : `${(body.visibility / 1609.344).toFixed(
-                                        1
-                                      )} miles`
-                                }</span>
+                                <span>${getVisibilityString(body.visibility, visibilityUnit)}</span>
                               </li>
                               <li class="list-group-item d-flex justify-content-between">
                                 <span>Cloudiness</span>
@@ -447,5 +441,14 @@ async function fetchWeather(latitude, longitude, unit) {
     result.innerHTML = weatherHTML;
   } catch (error) {
     console.error(error);
+  }
+}
+
+//Helper function to format visibility string without nested template literals
+function getVisibilityString(visibility, unit) {
+  if (unit === "km") {
+    return `${(visibility / 1000).toFixed(1)} km`;
+  } else {
+    return `${(visibility / 1609.344).toFixed(1)} miles`;
   }
 }

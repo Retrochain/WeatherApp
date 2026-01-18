@@ -78,7 +78,7 @@ function displayRecentSearches() {
 
 export function showDetails(lat, lon, unit) {
   console.log(lat, lon);
-  window.location.href = `index.html?lat=${lat}&lon=${lon}&unit=${unit}`;
+  globalThis.location.href = `index.html?lat=${lat}&lon=${lon}&unit=${unit}`;
 }
 
 document.addEventListener("DOMContentLoaded", displayRecentSearches);
