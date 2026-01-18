@@ -1,6 +1,3 @@
-import dotenv from "dotenv";
-dotenv.config();
-
 import { saveSearches, displayRecentSearches } from "./recent.js";
 
 let result = document.getElementById("weatherResult");
@@ -84,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function getLocationFromCoords(lat, lon) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/reverse";
-  const apiKey = process.env.API_KEY;
+  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
 
   const queryParams = new URLSearchParams({
     lat: lat,
@@ -155,7 +152,7 @@ async function handleLocation(loc, unit) {
 async function fetchLocationWithZip(param) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/zip";
-  const apiKey = process.env.API_KEY;
+  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
 
   const fullQuery = new URLSearchParams({
     zip: param,
@@ -186,7 +183,7 @@ async function fetchLocationWithZip(param) {
 async function fetchLocationWithName(param) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/geo/1.0/direct";
-  const apiKey = process.env.API_KEY;
+  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
 
   const fullQuery = new URLSearchParams({
     q: param,
@@ -219,7 +216,7 @@ async function fetchLocationWithName(param) {
 async function fetchWeather(latitude, longitude, unit) {
   const baseURL = "https://api.openweathermap.org";
   const endpoint = "/data/2.5/weather";
-  const apiKey = process.env.API_KEY;
+  const apiKey = "4accb0b517ed443bf0664626a4ef6368";
   let selectedUnits = "standard";
   let windUnit = "m/s";
   let visibilityUnit = "km";
